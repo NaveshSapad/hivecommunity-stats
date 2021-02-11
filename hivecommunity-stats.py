@@ -180,6 +180,7 @@ def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,qu
                         tx.appendWif(active_key) 
                         sign_tx=tx.sign()
                         tx_b=tx.broadcast()
+                        print("1")
                         print("SENT to {}: {} , Tx id :{}".format(user,quantity,sign_tx.id))
                         
                         '''
