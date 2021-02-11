@@ -204,6 +204,9 @@ if __name__ == '__main__':
     
     uid = os.environ['UID']
     pwd = os.environ['PWD']
+    uid=str(uid)
+    pwd=str(pwd)
+
     conn = establish_connection(uid,pwd)
     
     user=st.text_input("Enter username: ")
