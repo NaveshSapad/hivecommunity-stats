@@ -14,7 +14,7 @@ from beem.instance import set_shared_steem_instance
 from hiveengine.wallet import Wallet
 import requests
 import pandas as pd
-import pyodbc 
+import pymysql 
 import json
 from datetime import datetime as dt
 from datetime import timedelta
@@ -24,12 +24,11 @@ import streamlit as st
 
 
 def establish_connection(uid,pwd):
-    conn = pyodbc.connect('Driver={SQL Server};'
-                      'Server=vip.hivesql.io;'
+    conn = pymysql.connect('Server=vip.hivesql.io;'
                       'Database=DBHive;'
-                      'uid='+str(uid)+';'
-                      'pwd='+str(pwd)+';'
-                      'Trusted_Connection=no;' )
+                      'user='+str(uid)+';'
+                      'password='+str(pwd)+';'
+                      )
 
     return(conn)
 
