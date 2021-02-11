@@ -2,3 +2,4 @@ hiveengine
 streamlit
 pandas
 beem
+pymssql

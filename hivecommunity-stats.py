@@ -14,7 +14,7 @@ from beem.instance import set_shared_steem_instance
 from hiveengine.wallet import Wallet
 import requests
 import pandas as pd
-import pyodbc
+import pymssql
 import json
 from datetime import datetime as dt
 from datetime import timedelta
@@ -25,14 +25,14 @@ import streamlit as st
 
 def establish_connection(uid,pwd):
 
-    conn = pyodbc.connect('Driver={SQL Server};'
+    '''conn = pyodbc.connect('Driver={SQL Server};'
                       'Server=vip.hivesql.io;'
                       'Database=DBHive;'
                       'uid='+str(uid)+';'
                       'pwd='+str(pwd)+';'
-                      'Trusted_Connection=no;' )
+                      'Trusted_Connection=no;' )'''
     
-    #conn = pymssql.connect(server='vip.hivesql.io', user=uid, password=pwd, database='DBHive')
+    conn = pymssql.connect(server='vip.hivesql.io', user=uid, password=pwd, database='DBHive')
 
     return(conn)
 
@@ -210,8 +210,8 @@ if __name__ == '__main__':
 
     st.set_page_config(page_title='Hive Community stats, Earn rewards for engagement',layout='wide')
     
-    uid = os.environ['UID']
-    pwd = os.environ['PWD']
+    uid = 'Hive-amr008' #os.environ['UID']
+    pwd = 'JpoTZ7aNd4Q4Rqrx6ypk' #os.environ['PWD']
     uid=str(uid)
     pwd=str(pwd)
 
