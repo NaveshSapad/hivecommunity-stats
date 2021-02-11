@@ -215,6 +215,7 @@ if __name__ == '__main__':
 
     if user:
         if sym:
+            st.write("okay")
             left_box,right_box= st.beta_columns([1,3])
             
             frontend=get_frontend(sym)
