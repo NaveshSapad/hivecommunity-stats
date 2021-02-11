@@ -14,7 +14,7 @@ from beem.instance import set_shared_steem_instance
 from hiveengine.wallet import Wallet
 import requests
 import pandas as pd
-import pyodbc 
+import pymssql
 import json
 from datetime import datetime as dt
 from datetime import timedelta
@@ -24,12 +24,8 @@ import streamlit as st
 
 
 def establish_connection(uid,pwd):
-    conn = pyodbc.connect('Driver={SQL Server};'
-                      'Server=vip.hivesql.io;'
-                      'Database=DBHive;'
-                      'uid='+str(uid)+';'
-                      'pwd='+str(pwd)+';'
-                      'Trusted_Connection=no;' )
+    
+    conn = pymssql.connect(server='vip.hivesql.io', user=uid, password=pwd, database='DBHive')
 
     return(conn)
 
@@ -107,7 +103,7 @@ def retrieve_data(comment_query,post_query,frontend):
     return number_of_comments,sum_len,hours,authors_talked_to
 
 def calculation(number_of_comments,sum_len,hours,authors_talked_to,sym):
-    right_box.write("\nAuthors talked to:"+str(authors_talked_to),"Total length:"+str(sum_len),"Number of comments:"+str(number_of_comments),"Total time:"+str(hours))
+    right_box.write("\nAuthors talked to:"+str(authors_talked_to)+"Total length:"+str(sum_len)+"Number of comments:"+str(number_of_comments)+"Total time:"+str(hours))
 
     quantity_p = (authors_talked_to * 0.005) + (sum_len * 0.0001) + (number_of_comments * 0.0075)
 
@@ -214,17 +210,19 @@ if __name__ == '__main__':
     sym=st.selectbox("Select token: ",['LEO','SPORTS','CTP']) 
     sym=sym.upper()
 
-    left_box,right_box= st.beta_columns([1,3])
-    
-    frontend=get_frontend(sym)
-    
-    comment_query,post_query = retrieve_query(user,conn)
-    
-    number_of_comments,sum_len,hours,authors_talked_to = retrieve_data(comment_query,post_query,frontend)
-    
-    quantity = calculation(number_of_comments,sum_len,hours,authors_talked_to,sym)
-    
-    transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym)
+    if user:
+        if sym:
+            left_box,right_box= st.beta_columns([1,3])
+            
+            frontend=get_frontend(sym)
+            
+            comment_query,post_query = retrieve_query(user,conn)
+            
+            number_of_comments,sum_len,hours,authors_talked_to = retrieve_data(comment_query,post_query,frontend)
+            
+            quantity = calculation(number_of_comments,sum_len,hours,authors_talked_to,sym)
+            
+            transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym)
     
 
     
