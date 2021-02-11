@@ -2,4 +2,3 @@ hiveengine
 streamlit
 pandas
 beem
-pyodbc
