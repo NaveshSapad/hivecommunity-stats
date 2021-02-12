@@ -194,7 +194,7 @@ def check_claim(sym):
 
 def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym,frontend):
     user_list=check_claim(sym)
-    st.write(user_list)
+    
     
     if user not in user_list:
         if(number_of_comments>=10):
