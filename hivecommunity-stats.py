@@ -59,7 +59,7 @@ def todays_data(comment_query,post_query):
             front_end_list_c.append([json_fe['app'],1])
 
     for i in range(0,len(post_query)):
-        json_fe=json.loads(comment_query['json_metadata'][i])
+        json_fe=json.loads(post_query['json_metadata'][i])
         if 'app' in json_fe:
             front_end_list_p.append([json_fe['app'],1])
 
@@ -183,7 +183,7 @@ def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,qu
                         right_box.write("<p class='positive'><b>You have passed all requirements - initiating transfer </b></p>",unsafe_allow_html=True)
 
                         nodes = ["https://anyx.io/", "https://hive.roelandp.nl","rpc.ausbit.dev"]
-
+                        
                         active_key=os.environ['ACTIVE']
                         json_object = {
                                    "contractName":"tokens",
@@ -215,7 +215,7 @@ def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,qu
 
                         df_store_csv=pd.DataFrame([[user,quantity,dt.utcnow().date(),sym]])
                         df_store_csv.to_csv('user_claim.csv',mode='a',index=False,header=False)
-
+                        
 
                         time.sleep(3)
 
@@ -276,10 +276,11 @@ if __name__ == '__main__':
                     .negative {color:red; font-size:22px;}
                     .positive {color:green;font-size:22px;}
                     
-
+                    #date{color:#ffffff}
 
                     
                     </style>''',unsafe_allow_html=True)
+
 
     st.markdown("<h1 id='title'><center>Hive Community Stats -You get paid for your engagement</center></h1>",unsafe_allow_html=True)
 
@@ -289,6 +290,8 @@ if __name__ == '__main__':
     left_upper,right_box=st.beta_columns([1,4])
 
     left_bottom,right_posts,right_columns=st.beta_columns([2,2,2])
+
+    st.markdown("<p id='date'><center> {} </center></p>".format(str(dt.utcnow())),unsafe_allow_html=True)
 
     left_bottom.markdown("<h1>Your data for today : {} </h1>".format(dt.utcnow().date()),unsafe_allow_html=True)
     right_posts.markdown("<h1>Your Posts data for today </h1>",unsafe_allow_html=True)
