@@ -210,7 +210,7 @@ def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,qu
                         sign_tx=tx.sign()
                         tx_b=tx.broadcast()
 
-                        right_box.write("<p class='positive'>SENT to {}: {} , Tx id :{}</p>".format(user,quantity,sign_tx.id),unsafe_allow_html=True)
+                        right_box.write("<p class='positive'>SENT to {}: {} {}, Tx id :{}</p>".format(user,quantity,sym,sign_tx.id),unsafe_allow_html=True)
 
 
                         df_store_csv=pd.DataFrame([[user,quantity,dt.utcnow().date(),sym]])
