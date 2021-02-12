@@ -25,15 +25,7 @@ import streamlit as st
 
 def establish_connection(uid,pwd):
 
-    '''conn = pyodbc.connect('Driver={SQL Server};'
-                      'Server=vip.hivesql.io;'
-                      'Database=DBHive;'
-                      'uid='+str(uid)+';'
-                      'pwd='+str(pwd)+';'
-                      'Trusted_Connection=no;' )'''
-    
     conn = pymssql.connect(server='vip.hivesql.io', user=uid, password=pwd, database='DBHive')
-    #conn = pymysql.connect("vip.hivesql.io",uid,pwd,"DBHive" )
 
     return(conn)
 
@@ -57,10 +49,46 @@ def retrieve_query(user,conn):
     
     return comment_query,post_query
 
+def todays_data(comment_query,post_query):
+    front_end_list_c=[]
+    front_end_list_p=[]
+    
+    for i in range(0,len(comment_query)):
+        json_fe=json.loads(comment_query['json_metadata'][i])
+        if 'app' in json_fe:
+            front_end_list_c.append([json_fe['app'],1])
+
+    for i in range(0,len(post_query)):
+        json_fe=json.loads(comment_query['json_metadata'][i])
+        if 'app' in json_fe:
+            front_end_list_p.append([json_fe['app'],1])
+
+    if front_end_list_c:
+        df_c=pd.DataFrame(front_end_list_c)
+        df_c.columns=['frontend','count']
+    else:
+        df_c=pd.DataFrame(columns=['frontend','count'])
+
+    if front_end_list_p:
+        df_p=pd.DataFrame(front_end_list_p)
+        df_p.columns=['frontend','count']
+    else:
+        df_p=pd.DataFrame(columns=['frontend','count'])
+
+    #df_c_c=pd.DataFrame(columns=['count'])
+    #df_p_c=pd.DataFrame(columns=['count'])
+
+    #df_c_c['count']=df_c.count()
+    #df_p_c['count']=df_p.count()
+
+
+    
+    right_posts.table(df_p.groupby('frontend').sum())
+    right_columns.table(df_c.groupby('frontend').sum())
+    
+    
+
 def retrieve_data(comment_query,post_query,frontend):
-    
-    
-    #for i in range(0,len(post_query)):
         
     
     list_body=[]
@@ -75,13 +103,13 @@ def retrieve_data(comment_query,post_query,frontend):
     
     number_p=len(post_query)
     number_c=len(comment_query)
+
     
-    left_box.write("Total Posts today from all front-ends:"+str(number_p))
-    left_box.write("Total Comments today from all front-ends:"+str(number_c))
+    todays_data(comment_query,post_query)
     
-    print("\n Below data is only with respect to those which you have posted from {} frontend and only this will be considered for rewards.".format(frontend))
+    
     for i in range(0,len(comment_query)):
-        if(json.loads(comment_query['json_metadata'][i])['app'].startswith('leofinance')): # frontend
+        if(json.loads(comment_query['json_metadata'][i])['app'].startswith(frontend)): # frontend
             flag=1
             s=(comment_query['body'][i])
             list_body.append(s)
@@ -108,18 +136,16 @@ def retrieve_data(comment_query,post_query,frontend):
         total_time=end_time-start_time
         hours= total_time.seconds / 3600
     
-    return number_of_comments,sum_len,hours,authors_talked_to
+    return number_of_comments,sum_len,hours,authors_talked_to,number_p,number_c
 
 def calculation(number_of_comments,sum_len,hours,authors_talked_to,sym):
-    right_box.write("\nAuthors talked to:"+str(authors_talked_to)+"Total length:"+str(sum_len)+"Number of comments:"+str(number_of_comments)+"Total time:"+str(hours))
-
+    
     quantity_p = (authors_talked_to * 0.005) + (sum_len * 0.0001) + (number_of_comments * 0.0075)
 
 
     if(quantity_p>1):
         quantity_p=1
 
-    #right_box.write("\n"+str(quantity_p),(authors_talked_to * 0.005),sum_len * 0.0001,(number_of_comments * 0.0075))
 
     funds=get_balance('amr008.rewards',sym)
     quantity=float(funds)*(quantity_p/100)
@@ -138,33 +164,35 @@ def get_balance(hive_user,token):
             return(list_balances[i]['balance'])
     return(0)
 
-def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym):
+def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym,frontend):
     df=pd.read_csv('user_claim.csv')
     df=df[df['date']==str(dt.utcnow().date())]
     df=df[df['sym']==sym]
-
+    
     if user not in df['user'].tolist():
         if(number_of_comments>=10):
-            right_box.write("Number of comments satisfied")
-            if(sum_len>1000):
-                right_box.write("Quality of comments satisfied")
-                if(authors_talked_to>4):
-                    right_box.write("You have talked to atleast 5 different persons")
-                    if(hours>0.3):
-                        
-                        right_box.write("You have passed all requirements - initiating transfer ")
-                        '''
+            right_box.markdown("<p class='positive'><b>Number of comments satisfied</b>,<b>Comments made from {} :</b> <i>{}</i></p>".format(frontend,str(number_of_comments)),unsafe_allow_html=True)
+            time.sleep(1)
+            if(sum_len>100):
+                right_box.write("<p class='positive'><b>Quality of comments satisfied</b></p>",unsafe_allow_html=True)
+                time.sleep(1)
+                if(authors_talked_to>2):
+                    right_box.write("<p class='positive'><b>You have talked to atleast 5 different persons</b>,<b>Authors talked to:</b> <i>{}</i></p>".format(str(authors_talked_to)),unsafe_allow_html=True)
+                    time.sleep(1)
+                    if(hours>0.3):                
+                        right_box.write("<p class='positive'><b>You have passed all requirements - initiating transfer </b></p>",unsafe_allow_html=True)
+
                         nodes = ["https://anyx.io/", "https://hive.roelandp.nl","rpc.ausbit.dev"]
 
                         active_key=os.environ['ACTIVE']
                         json_object = {
-                        "contractName":"tokens",
-                        "contractAction":"transfer",
-                        "contractPayload": {
-                        "symbol":sym,
-                        "to": user,
-                        "quantity": str(quantity),
-                        "memo": "From HCS - rewards for engagement"}}
+                                   "contractName":"tokens",
+                                   "contractAction":"transfer",
+                                   "contractPayload": {
+                                   "symbol":sym,
+                                   "to": user,
+                                   "quantity": str(quantity),
+                                   "memo": "From HCS - rewards for engagement"}}
 
 
                         idxxx = "ssc-mainnet-hive"
@@ -172,40 +200,45 @@ def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,qu
                         set_shared_steem_instance(stm)
                         tx = TransactionBuilder(steem_instance=stm)
                         op = operations.Custom_json(** {
-                                                    "required_auths": ["amr008.rewards"],
-                                                    "required_posting_auths": [],
-                                                    "id": idxxx,
-                                                    "json": json_object
-                                                } )
+                                                        "required_auths": ["amr008.rewards"],
+                                                        "required_posting_auths": [],
+                                                        "id": idxxx,
+                                                        "json": json_object
+                                                            } )
                         tx.appendOps([op])
                         tx.appendWif(active_key) 
                         sign_tx=tx.sign()
                         tx_b=tx.broadcast()
-                        print("1")
-                        print("SENT to {}: {} , Tx id :{}".format(user,quantity,sign_tx.id))
-                        
-                        '''
+
+                        right_box.write("<p class='positive'>SENT to {}: {} , Tx id :{}</p>".format(user,quantity,sign_tx.id),unsafe_allow_html=True)
+
+
                         df_store_csv=pd.DataFrame([[user,quantity,dt.utcnow().date(),sym]])
                         df_store_csv.to_csv('user_claim.csv',mode='a',index=False,header=False)
-                        
+
 
                         time.sleep(3)
-                    else:
-                        right_box.write("You seem to have rushed through and made comments in a hurry , you have to slow down , take your time and come back")
-                        
-                else:
-                    right_box.write("You have talked to less than 5 people , please talk to atleast 5 people and come back ")
-                    
-            else:
-                right_box.write("Poor quality , put more effort and come back - What can you do ? Post more quality comments on user posts")
-                
-        else:
-            right_box.write("Less than 10 comments made ,make atleast 10 comments from {} front-end and come back".format(frontend))
-            
 
+                    else:
+                        right_box.markdown("<p class='negative'><b>You seem to have rushed through and made comments in a hurry , you have to slow down , take your time and come back</b></p>",unsafe_allow_html=True)
+                            
+                else:
+                    right_box.markdown("<p class='negative'><b>Please talk to atleast 5 people and come back</b>,<b>Number of authors talked to so far :</b> <i>{}</i></p> ".format(str(authors_talked_to)),unsafe_allow_html=True)
+                        
+            else:
+                right_box.markdown("<p class='negative'><b>Poor quality , put more effort and come back - What can you do ? Post more quality comments on user posts</b></p>",unsafe_allow_html=True)
+                    
+        else:
+            right_box.markdown("<p class='negative'><b>Less than 10 comments made ,make atleast 10 comments from {} front-end and come back</b>,<b>Comments made :</b> <i>{}</i></p>".format(frontend,str(number_of_comments)),unsafe_allow_html=True)
+                
     else:
-        right_box.write("You already claimed {} today, come back tomorrow".format(sym))
-        
+        right_box.markdown("<p class='negative'><b>You already claimed {} today, come back tomorrow</b></p>".format(sym),unsafe_allow_html=True)
+
+
+def left_bottom_data(number_p,number_c):
+
+    data_left_b.markdown("<h2> Number of posts from all front-end : {} </h2><h2> Number of comments from all front-end : {} </h2> ".format(number_p,number_c),unsafe_allow_html=True)
+
         
 if __name__ == '__main__':
 
@@ -214,27 +247,84 @@ if __name__ == '__main__':
     uid = os.environ['hiveuid']
     pwd = os.environ['hivepwd']
 
+    st.markdown('''<style>
+                    body { background-color:#000;
+                    }
+                    #title {color:#ffffff;}
+                    
+                    
+                    .css-wctngo {background-color:#ffffff;
+                    padding:25px;
+                    border-radius:10px;}
+                    
+                    .css-1oyz2rp  {background-color:#ffffff;
+                    padding:25px;
+                    border-radius:10px;}
+
+                    .css-t1ghz5 {
+                    
+                    background-color:#ffffff;
+                    padding:25px;
+                    margin-top:50px;
+                    border-radius:10px;}
+
+                    .css-1hgnhsa {background-color:#ffffff;
+                    padding:25px;
+                    margin-top:50px;
+                    border-radius:10px;}
+
+                    .negative {color:red; font-size:22px;}
+                    .positive {color:green;font-size:22px;}
+                    
+
+
+                    
+                    </style>''',unsafe_allow_html=True)
+
+    st.markdown("<h1 id='title'><center>Hive Community Stats -You get paid for your engagement</center></h1>",unsafe_allow_html=True)
+
 
     conn = establish_connection(uid,pwd)
+
+    left_upper,right_box=st.beta_columns([1,4])
+
+    left_bottom,right_posts,right_columns=st.beta_columns([2,2,2])
+
+    left_bottom.markdown("<h1>Your data for today : {} </h1>".format(dt.utcnow().date()),unsafe_allow_html=True)
+    right_posts.markdown("<h1>Your Posts data for today </h1>",unsafe_allow_html=True)
+    right_columns.markdown("<h1>Your Comments data for today  </h1>",unsafe_allow_html=True)
+
+    data_left_b=left_bottom.empty()
+    data_left_b.write("Click claim rewards button to retrieve data")
     
-    user=st.text_input("Enter username: ")
-    sym=st.selectbox("Select token: ",['LEO','SPORTS','CTP']) 
+    user=left_upper.text_input("Enter username: ")
+    sym=left_upper.selectbox("Select token: ",['LEO','SPORTS','CTP']) 
     sym=sym.upper()
 
-    if user:
-        if sym:
-            st.write("okay")
-            left_box,right_box= st.beta_columns([1,3])
+    frontend=get_frontend(sym)
+    right_box.markdown("<h1><center>Your {} rewards criteria check </center></h1>".format(sym),unsafe_allow_html=True)
+
+    if left_upper.button("Get my data and claim rewards"):
+        if user:
+            if sym:                
+                
+                comment_query,post_query = retrieve_query(user,conn)
+                
+                number_of_comments,sum_len,hours,authors_talked_to,number_p,number_c = retrieve_data(comment_query,post_query,frontend)
+
+
+                left_bottom_data(number_p,number_c)
+                               
+                
+                quantity = calculation(number_of_comments,sum_len,hours,authors_talked_to,sym)
+                
+                transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym,frontend)
+            else:
+                left_upper.write("Select symbol")
+        else:
+            left_upper.write("Enter username")
+
             
-            frontend=get_frontend(sym)
-            
-            comment_query,post_query = retrieve_query(user,conn)
-            
-            number_of_comments,sum_len,hours,authors_talked_to = retrieve_data(comment_query,post_query,frontend)
-            
-            quantity = calculation(number_of_comments,sum_len,hours,authors_talked_to,sym)
-            
-            transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym)
     
 
     
