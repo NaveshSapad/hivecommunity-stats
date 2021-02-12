@@ -211,8 +211,8 @@ if __name__ == '__main__':
 
     st.set_page_config(page_title='Hive Community stats, Earn rewards for engagement',layout='wide')
     
-    uid = 'Hive-amr008' #os.environ['UID']
-    pwd = 'JpoTZ7aNd4Q4Rqrx6ypk' #os.environ['PWD']
+    uid = os.environ['UID']
+    pwd = os.environ['PWD']
     uid=str(uid)
     pwd=str(pwd)
 
