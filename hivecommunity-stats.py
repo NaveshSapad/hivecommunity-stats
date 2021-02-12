@@ -12,6 +12,7 @@ from beem.transactionbuilder import TransactionBuilder
 from beembase import operations
 from beem.instance import set_shared_steem_instance
 from hiveengine.wallet import Wallet
+from hiveengine.api import Api
 import requests
 import pandas as pd
 import pymssql
@@ -164,12 +165,38 @@ def get_balance(hive_user,token):
             return(list_balances[i]['balance'])
     return(0)
 
+def check_claim(sym):
+    s=[]
+    end=0
+    x=0
+    while(end!=1):
+        res=api.get_history('amr008.rewards',sym,offset=x)
+        s.append(res)
+
+        x=x+len(res)
+        if(len(res)<500):
+            end=1
+
+
+    listfinal=[]
+    for i in range(0,len(s)):
+        for j in range(0,len(s[i])):
+            listfinal.append(s[i][j])
+
+    all_list=[]
+    user_list=[]
+    for i in range(0,len(listfinal)):
+        if(listfinal[i]['from']=='amr008.rewards'):
+            if(time.strftime('%Y-%m-%d', time.localtime(listfinal[i]['timestamp']))==str(dt.utcnow().date())):
+                user_list.append(listfinal[i]['to'])
+
+    return user_list
+
 def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym,frontend):
-    df=pd.read_csv('user_claim.csv')
-    df=df[df['date']==str(dt.utcnow().date())]
-    df=df[df['sym']==sym]
+    user_list=check_claim(sym)
+    st.write(user_list)
     
-    if user not in df['user'].tolist():
+    if user not in user_list:
         if(number_of_comments>=10):
             right_box.markdown("<p class='positive'><b>Number of comments satisfied</b>,<b>Comments made from {} :</b> <i>{}</i></p>".format(frontend,str(number_of_comments)),unsafe_allow_html=True)
             time.sleep(1)
@@ -179,9 +206,11 @@ def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,qu
                 if(authors_talked_to>2):
                     right_box.write("<p class='positive'><b>You have talked to atleast 5 different persons</b>,<b>Authors talked to:</b> <i>{}</i></p>".format(str(authors_talked_to)),unsafe_allow_html=True)
                     time.sleep(1)
-                    if(hours>0.3):                
+                    if(hours>0.3):
+                        
                         right_box.write("<p class='positive'><b>You have passed all requirements - initiating transfer </b></p>",unsafe_allow_html=True)
 
+                        
                         nodes = ["https://anyx.io/", "https://hive.roelandp.nl","rpc.ausbit.dev"]
                         
                         active_key=os.environ['ACTIVE']
@@ -211,10 +240,10 @@ def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,qu
                         tx_b=tx.broadcast()
 
                         right_box.write("<p class='positive'>SENT to {}: {} {}, Tx id :{}</p>".format(user,quantity,sym,sign_tx.id),unsafe_allow_html=True)
+                        
 
-
-                        df_store_csv=pd.DataFrame([[user,quantity,dt.utcnow().date(),sym]])
-                        df_store_csv.to_csv('user_claim.csv',mode='a',index=False,header=False)
+                        #df_store_csv=pd.DataFrame([[user,quantity,dt.utcnow().date(),sym]])
+                        #df_store_csv.to_csv('user_claim.csv',mode='a',index=False,header=False)
                         
 
                         time.sleep(3)
@@ -243,6 +272,8 @@ def left_bottom_data(number_p,number_c):
 if __name__ == '__main__':
 
     st.set_page_config(page_title='Hive Community stats, Earn rewards for engagement',layout='wide')
+
+    api=Api()
     
     uid = os.environ['hiveuid']
     pwd = os.environ['hivepwd']
