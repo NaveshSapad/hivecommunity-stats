@@ -210,7 +210,7 @@ def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,qu
                         
                         right_box.write("<p class='positive'><b>You have passed all requirements - initiating transfer </b></p>",unsafe_allow_html=True)
 
-                        if right_box.button("Click here to claim {} now".format(sym):
+                        if right_box.button("Click here to claim {} now".format(sym)):
                             nodes = ["https://anyx.io/", "https://hive.roelandp.nl","rpc.ausbit.dev"]
                             
                             active_key=os.environ['ACTIVE']
