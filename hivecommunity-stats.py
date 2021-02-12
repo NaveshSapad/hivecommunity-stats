@@ -36,7 +36,7 @@ def get_frontend(sym):
     elif(sym=='SPORTS'):
         frontend='sportstalksocial'
     elif(sym=='CTP'):
-        frontend='ctptalk'
+        frontend='clicktrackprofit'
         
     return frontend
 
@@ -192,7 +192,7 @@ def check_claim(sym):
 
     return user_list
 
-def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym,frontend):
+def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym,frontend,button_flag):
     user_list=check_claim(sym)
     
     
@@ -208,45 +208,45 @@ def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,qu
                     time.sleep(1)
                     if(hours>0.3):
                         
-                        right_box.write("<p class='positive'><b>You have passed all requirements - initiating transfer </b></p>",unsafe_allow_html=True)
+                        right_box.write("<p class='positive'><b>You have passed all requirements </b></p>",unsafe_allow_html=True)
+                        if(button_flag==1):
+                            right_box.write("If you are trying to claim the rewards for your account , click claim rewards button in the left box")
 
-                        
-                        nodes = ["https://anyx.io/", "https://hive.roelandp.nl","rpc.ausbit.dev"]
+                        if(button_flag==2):
+                            right_box.write("<p class='positive'><b>Initiating transfer </b></p>",unsafe_allow_html=True)
+                            nodes = ["https://anyx.io/", "https://hive.roelandp.nl","rpc.ausbit.dev"]
                             
-                        active_key=os.environ['ACTIVE']
-                        json_object = {
-                                       "contractName":"tokens",
-                                       "contractAction":"transfer",
-                                       "contractPayload": {
-                                       "symbol":sym,
-                                       "to": user,
-                                       "quantity": str(quantity),
-                                       "memo": "From HCS - rewards for engagement"}}
+                            active_key=os.environ['ACTIVE']
+                            json_object = {
+                                           "contractName":"tokens",
+                                           "contractAction":"transfer",
+                                           "contractPayload": {
+                                           "symbol":sym,
+                                           "to": user,
+                                           "quantity": str(quantity),
+                                           "memo": "From HCS - rewards for engagement"}}
 
 
-                        idxxx = "ssc-mainnet-hive"
-                        stm = Hive(nodes)
-                        set_shared_steem_instance(stm)
-                        tx = TransactionBuilder(steem_instance=stm)
-                        op = operations.Custom_json(** {
-                                                            "required_auths": ["amr008.rewards"],
-                                                            "required_posting_auths": [],
-                                                            "id": idxxx,
-                                                            "json": json_object
-                                                                } )
-                        tx.appendOps([op])
-                        tx.appendWif(active_key) 
-                        sign_tx=tx.sign()
-                        tx_b=tx.broadcast()
+                            idxxx = "ssc-mainnet-hive"
+                            stm = Hive(nodes)
+                            set_shared_steem_instance(stm)
+                            tx = TransactionBuilder(steem_instance=stm)
+                            op = operations.Custom_json(** {
+                                                                "required_auths": ["amr008.rewards"],
+                                                                "required_posting_auths": [],
+                                                                "id": idxxx,
+                                                                "json": json_object
+                                                                    } )
+                            tx.appendOps([op])
+                            tx.appendWif(active_key) 
+                            sign_tx=tx.sign()
+                            tx_b=tx.broadcast()
 
-                        right_box.write("<p class='positive'>SENT to {}: {} {}, Tx id :{}</p>".format(user,quantity,sym,sign_tx.id),unsafe_allow_html=True)
+                            right_box.write("<p class='positive'>SENT to {}: {} {}, Tx id :{}</p>".format(user,quantity,sym,sign_tx.id),unsafe_allow_html=True)
+                            
+
                         
-
-                        #df_store_csv=pd.DataFrame([[user,quantity,dt.utcnow().date(),sym]])
-                        #df_store_csv.to_csv('user_claim.csv',mode='a',index=False,header=False)
-                        
-
-                        time.sleep(3)
+                            time.sleep(3)
 
                     else:
                         right_box.markdown("<p class='negative'><b>You seem to have rushed through and made comments in a hurry , you have to slow down , take your time and come back</b></p>",unsafe_allow_html=True)
@@ -338,7 +338,10 @@ if __name__ == '__main__':
     frontend=get_frontend(sym)
     right_box.markdown("<h1><center>Your {} rewards criteria check </center></h1>".format(sym),unsafe_allow_html=True)
 
-    if left_upper.button("Get my data and claim rewards"):
+    button_flag=0
+    
+    if left_upper.button("Get my data"):
+        button_flag=1
         if user:
             if sym:                
                 
@@ -352,11 +355,35 @@ if __name__ == '__main__':
                 
                 quantity = calculation(number_of_comments,sum_len,hours,authors_talked_to,sym)
                 
-                transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym,frontend)
+                transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym,frontend,button_flag)
             else:
                 left_upper.write("Select symbol")
         else:
             left_upper.write("Enter username")
+
+    if left_upper.button("Claim rewards"):
+        button_flag=2
+        if user:
+            if sym:                
+                
+                comment_query,post_query = retrieve_query(user,conn)
+                
+                number_of_comments,sum_len,hours,authors_talked_to,number_p,number_c = retrieve_data(comment_query,post_query,frontend)
+
+
+                left_bottom_data(number_p,number_c)
+                               
+                
+                quantity = calculation(number_of_comments,sum_len,hours,authors_talked_to,sym)
+                
+                transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym,frontend,button_flag)
+            else:
+                left_upper.write("Select symbol")
+        else:
+            left_upper.write("Enter username")
+        
+
+    
 
             
     
