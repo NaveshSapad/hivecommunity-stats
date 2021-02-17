@@ -43,6 +43,7 @@ if __name__ == '__main__':
     </style>    ''',unsafe_allow_html=True)
 
     user=st.sidebar.text_input("Enter your Hive username")
+    user=user.lower()
     title=st.empty()
 
     p_d = st.sidebar.empty()
