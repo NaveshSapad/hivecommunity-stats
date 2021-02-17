@@ -1,11 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# 
-
-# In[83]:
-
-
 from beem import Hive
 from beem import Steem
 from beem.transactionbuilder import TransactionBuilder
@@ -21,374 +13,182 @@ from datetime import datetime as dt
 from datetime import timedelta
 import time
 import os
+import altair as alt
 import streamlit as st
+import matplotlib.pyplot as plt
+import datetime
 
 
-def establish_connection(uid,pwd):
 
+def establish_conn(uid,pwd):
     conn = pymssql.connect(server='vip.hivesql.io', user=uid, password=pwd, database='DBHive')
-
-    return(conn)
-
-def get_frontend(sym):
-    if(sym=='LEO'):
-        frontend='leofinance'
-    elif(sym=='SPORTS'):
-        frontend='sportstalksocial'
-    elif(sym=='CTP'):
-        frontend='clicktrackprofit'
-        
-    return frontend
-
-def retrieve_query(user,conn):
-    comment_query = pd.read_sql_query(''' select * from Comments  where author='{}' and parent_author <> '' and created > GETDATE()-1 ORDER BY created DESC '''.format(user),conn)
-
-    post_query = pd.read_sql_query(''' select * from Comments  where author='{}' and parent_author = '' and created > GETDATE()-1 ORDER BY created DESC '''.format(user),conn)
     
-    comment_query=comment_query[comment_query['created']>str(dt.utcnow().date())]
-    post_query=post_query[post_query['created']>str(dt.utcnow().date())]
-    
-    return comment_query,post_query
+    return conn
 
-def todays_data(comment_query,post_query):
-    front_end_list_c=[]
-    front_end_list_p=[]
-    
-    for i in range(0,len(comment_query)):
-        json_fe=json.loads(comment_query['json_metadata'][i])
-        if 'app' in json_fe:
-            front_end_list_c.append([json_fe['app'],1])
-
-    for i in range(0,len(post_query)):
-        json_fe=json.loads(post_query['json_metadata'][i])
-        if 'app' in json_fe:
-            front_end_list_p.append([json_fe['app'],1])
-
-    if front_end_list_c:
-        df_c=pd.DataFrame(front_end_list_c)
-        df_c.columns=['frontend','count']
-    else:
-        df_c=pd.DataFrame(columns=['frontend','count'])
-
-    if front_end_list_p:
-        df_p=pd.DataFrame(front_end_list_p)
-        df_p.columns=['frontend','count']
-    else:
-        df_p=pd.DataFrame(columns=['frontend','count'])
-
-    #df_c_c=pd.DataFrame(columns=['count'])
-    #df_p_c=pd.DataFrame(columns=['count'])
-
-    #df_c_c['count']=df_c.count()
-    #df_p_c['count']=df_p.count()
-
-
-    
-    right_posts.table(df_p.groupby('frontend').sum())
-    right_columns.table(df_c.groupby('frontend').sum())
-    
-    
-
-def retrieve_data(comment_query,post_query,frontend):
-        
-    
-    list_body=[]
-    parent_author_name=[]
-    sum_len=0
-    start_time=''
-    end_time=''
-    number_of_comments=0
-    flag=0
-    authors_talked_to=0
-    hours=0
-    
-    number_p=len(post_query)
-    number_c=len(comment_query)
-
-    
-    todays_data(comment_query,post_query)
-    
-    
-    for i in range(0,len(comment_query)):
-        if(json.loads(comment_query['json_metadata'][i])['app'].startswith(frontend)): # frontend
-            flag=1
-            s=(comment_query['body'][i])
-            list_body.append(s)
-
-
-            parent_author_name.append(comment_query['parent_author'][i])
-
-            if not end_time:
-                end_time=comment_query['created'][i]
-
-            number_of_comments += 1 
-
-
-    if(flag==1):
-        start_time=comment_query['created'][i]
-
-
-        for body in list_body:
-            body=body.split("Posted Using")[0]
-            sum_len += len(body)
-
-        authors_talked_to=len(set(parent_author_name))
-
-        total_time=end_time-start_time
-        hours= total_time.seconds / 3600
-    
-    return number_of_comments,sum_len,hours,authors_talked_to,number_p,number_c
-
-def calculation(number_of_comments,sum_len,hours,authors_talked_to,sym):
-    
-    quantity_p = (authors_talked_to * 0.005) + (sum_len * 0.0001) + (number_of_comments * 0.0075)
-
-
-    if(quantity_p>1):
-        quantity_p=1
-
-
-    funds=get_balance('amr008.rewards',sym)
-    quantity=float(funds)*(quantity_p/100)
-
-    quantity=round(quantity,3)
-    print(quantity)
-    
-    return quantity
-
-def get_balance(hive_user,token):
-    wallet=Wallet(hive_user)
-
-    list_balances=wallet.get_balances()
-    for i in range(0,len(list_balances)):
-        if(list_balances[i]['symbol']==token):
-            return(list_balances[i]['balance'])
-    return(0)
-
-def check_claim(sym):
-    s=[]
-    end=0
-    x=0
-    while(end!=1):
-        res=api.get_history('amr008.rewards',sym,offset=x)
-        s.append(res)
-
-        x=x+len(res)
-        if(len(res)<500):
-            end=1
-
-
-    listfinal=[]
-    for i in range(0,len(s)):
-        for j in range(0,len(s[i])):
-            listfinal.append(s[i][j])
-
-    all_list=[]
-    user_list=[]
-    for i in range(0,len(listfinal)):
-        if(listfinal[i]['from']=='amr008.rewards'):
-            if(time.strftime('%Y-%m-%d', time.localtime(listfinal[i]['timestamp']))==str(dt.utcnow().date())):
-                user_list.append(listfinal[i]['to'])
-
-    return user_list
-
-def transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym,frontend,button_flag):
-    user_list=check_claim(sym)
-    
-    
-    if user not in user_list:
-        if(number_of_comments>=10):
-            right_box.markdown("<p class='positive'><b>Number of comments satisfied</b>,<b>Comments made from {} :</b> <i>{}</i></p>".format(frontend,str(number_of_comments)),unsafe_allow_html=True)
-            time.sleep(1)
-            if(sum_len>100):
-                right_box.write("<p class='positive'><b>Quality of comments satisfied</b></p>",unsafe_allow_html=True)
-                time.sleep(1)
-                if(authors_talked_to>2):
-                    right_box.write("<p class='positive'><b>You have talked to atleast 5 different persons</b>,<b>Authors talked to:</b> <i>{}</i></p>".format(str(authors_talked_to)),unsafe_allow_html=True)
-                    time.sleep(1)
-                    if(hours>0.3):
-                        
-                        right_box.write("<p class='positive'><b>You have passed all requirements </b></p>",unsafe_allow_html=True)
-                        if(button_flag==1):
-                            right_box.write("If you are trying to claim the rewards for your account , click claim rewards button in the left box")
-
-                        if(button_flag==2):
-                            right_box.write("<p class='positive'><b>Initiating transfer </b></p>",unsafe_allow_html=True)
-                            nodes = ["https://anyx.io/", "https://hive.roelandp.nl","rpc.ausbit.dev"]
-                            
-                            active_key=os.environ['ACTIVE']
-                            json_object = {
-                                           "contractName":"tokens",
-                                           "contractAction":"transfer",
-                                           "contractPayload": {
-                                           "symbol":sym,
-                                           "to": user,
-                                           "quantity": str(quantity),
-                                           "memo": "From HCS - rewards for engagement"}}
-
-
-                            idxxx = "ssc-mainnet-hive"
-                            stm = Hive(nodes)
-                            set_shared_steem_instance(stm)
-                            tx = TransactionBuilder(steem_instance=stm)
-                            op = operations.Custom_json(** {
-                                                                "required_auths": ["amr008.rewards"],
-                                                                "required_posting_auths": [],
-                                                                "id": idxxx,
-                                                                "json": json_object
-                                                                    } )
-                            tx.appendOps([op])
-                            tx.appendWif(active_key) 
-                            sign_tx=tx.sign()
-                            tx_b=tx.broadcast()
-
-                            right_box.write("<p class='positive'>SENT to {}: {} {}, Tx id :{}</p>".format(user,quantity,sym,sign_tx.id),unsafe_allow_html=True)
-                            
-
-                        
-                            time.sleep(3)
-
-                    else:
-                        right_box.markdown("<p class='negative'><b>You seem to have rushed through and made comments in a hurry , you have to slow down , take your time and come back</b></p>",unsafe_allow_html=True)
-                            
-                else:
-                    right_box.markdown("<p class='negative'><b>Please talk to atleast 5 people and come back</b>,<b>Number of authors talked to so far :</b> <i>{}</i></p> ".format(str(authors_talked_to)),unsafe_allow_html=True)
-                        
-            else:
-                right_box.markdown("<p class='negative'><b>Poor quality , put more effort and come back - What can you do ? Post more quality comments on user posts</b></p>",unsafe_allow_html=True)
-                    
-        else:
-            right_box.markdown("<p class='negative'><b>Less than 10 comments made ,make atleast 10 comments from {} front-end and come back</b>,<b>Comments made :</b> <i>{}</i></p>".format(frontend,str(number_of_comments)),unsafe_allow_html=True)
-                
-    else:
-        right_box.markdown("<p class='negative'><b>You already claimed {} today, come back tomorrow</b></p>".format(sym),unsafe_allow_html=True)
-
-
-def left_bottom_data(number_p,number_c):
-
-    data_left_b.markdown("<h2> Number of posts from all front-end : {} </h2><h2> Number of comments from all front-end : {} </h2> ".format(number_p,number_c),unsafe_allow_html=True)
-
-        
 if __name__ == '__main__':
 
-    st.set_page_config(page_title='Hive Community stats, Earn rewards for engagement',layout='wide')
-
-    api=Api()
+    st.set_page_config(page_title='Hive Community Stats',layout='wide')
     
     uid = os.environ['hiveuid']
     pwd = os.environ['hivepwd']
 
+    conn=establish_conn(uid,pwd)
+
     st.markdown('''<style>
-                    body { background-color:#000;
-                    }
-                    #title {color:#ffffff;}
-                    
-                    
-                    .css-wctngo {background-color:#ffffff;
-                    padding:25px;
-                    border-radius:10px;}
-                    
-                    .css-1oyz2rp  {background-color:#ffffff;
-                    padding:25px;
-                    border-radius:10px;}
+    .css-z8kais{align-items:center;}
+    .css-1bjf9av .css-106gl43 {border:3px black solid;}
 
-                    .css-t1ghz5 {
-                    
-                    background-color:#ffffff;
-                    padding:25px;
-                    margin-top:50px;
-                    border-radius:10px;}
-
-                    .css-1hgnhsa {background-color:#ffffff;
-                    padding:25px;
-                    margin-top:50px;
-                    border-radius:10px;}
-
-                    .negative {color:red; font-size:22px;}
-                    .positive {color:green;font-size:22px;}
-                    
-                    #date{color:#ffffff}
-
-                    
-                    </style>''',unsafe_allow_html=True)
-
-
-    st.markdown("<h1 id='title'><center>Hive Community Stats -You get paid for your engagement</center></h1>",unsafe_allow_html=True)
-
-
-    conn = establish_connection(uid,pwd)
-
-    left_upper,right_box=st.beta_columns([1,4])
-
-    left_bottom,right_posts,right_columns=st.beta_columns([2,2,2])
-
-    st.markdown("<p id='date'><center> {} </center></p>".format(str(dt.utcnow())),unsafe_allow_html=True)
-
-    left_bottom.markdown("<h1>Your data for today : {} </h1>".format(dt.utcnow().date()),unsafe_allow_html=True)
-    right_posts.markdown("<h1>Your Posts data for today </h1>",unsafe_allow_html=True)
-    right_columns.markdown("<h1>Your Comments data for today  </h1>",unsafe_allow_html=True)
-
-    data_left_b=left_bottom.empty()
-    data_left_b.write("Click claim rewards button to retrieve data")
+    .css-1f5jof3{margin-left:100px;}
     
-    user=left_upper.text_input("Enter username: ")
-    sym=left_upper.selectbox("Select token: ",['LEO','SPORTS','CTP']) 
-    sym=sym.upper()
+    </style>    ''',unsafe_allow_html=True)
 
-    frontend=get_frontend(sym)
-    right_box.markdown("<h1><center>Your {} rewards criteria check </center></h1>".format(sym),unsafe_allow_html=True)
+    user=st.sidebar.text_input("Enter your Hive username")
+    title=st.empty()
 
-    button_flag=0
+    p_d = st.sidebar.empty()
+    p_text = st.sidebar.progress(0)
     
-    if left_upper.button("Get my data"):
-        button_flag=1
-        if user:
-            if sym:                
-                
-                comment_query,post_query = retrieve_query(user,conn)
-                
-                number_of_comments,sum_len,hours,authors_talked_to,number_p,number_c = retrieve_data(comment_query,post_query,frontend)
+    
+    title.markdown("<h1><center> Enter your Hive username in the sidebar to get your data ( left) </center></h1>",unsafe_allow_html=True)
+    if user:
+       
+        title.empty()
+        
+        p_text.progress(20)
+        p_d.write("Retrieving your info")
+        
+        user_pc = pd.read_sql_query('''select * from Comments where author= '{}' and created > GETDATE()-31  ORDER BY ID DESC '''.format(user),conn)
 
+        p_d.write("Data received , preparing charts")
+        p_text.progress(60)
+        
+        post_c=0
+        comment_c=0
+        save_list=[]
+        for i in range(0,len(user_pc)):
+            try:
+                json_metadata=json.loads(user_pc['json_metadata'][i])
+                if 'app' in json_metadata:
+                    save_list.append([user_pc['author'][i],user_pc['parent_author'][i],json_metadata['app'],user_pc['created'][i].date()])
+                    
+                    if(user_pc['parent_author'][i]==''):
+                        post_c += 1
+                    else:
+                        comment_c += 1
+                        
+            except:
+                print("Yes")
+                pass
 
-                left_bottom_data(number_p,number_c)
-                               
-                
-                quantity = calculation(number_of_comments,sum_len,hours,authors_talked_to,sym)
-                
-                transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym,frontend,button_flag)
-            else:
-                left_upper.write("Select symbol")
-        else:
-            left_upper.write("Enter username")
+        p_text.progress(80)
+        
+            
+        st.markdown("<h3><center> Your total post count for past 30 days: {}, Your total comment count for past 30 days: {}</center></h3><hr>".format(post_c,comment_c),unsafe_allow_html=True)
+            
+        df_pc = pd.DataFrame(save_list,columns=['Author','Parent_author','Frontend','Date'])
 
-    if left_upper.button("Claim rewards"):
-        button_flag=2
-        if user:
-            if sym:                
-                
-                comment_query,post_query = retrieve_query(user,conn)
-                
-                number_of_comments,sum_len,hours,authors_talked_to,number_p,number_c = retrieve_data(comment_query,post_query,frontend)
-
-
-                left_bottom_data(number_p,number_c)
-                               
-                
-                quantity = calculation(number_of_comments,sum_len,hours,authors_talked_to,sym)
-                
-                transaction_check(user,number_of_comments,sum_len,authors_talked_to,hours,quantity,sym,frontend,button_flag)
-            else:
-                left_upper.write("Select symbol")
-        else:
-            left_upper.write("Enter username")
         
 
-    
+        df_pc['Type']=str
+        for i in range(0,len(df_pc)):
+            if df_pc['Parent_author'][i]=='':
+                df_pc['Type'][i]='Post'
+            else:
+                df_pc['Type'][i]='Comment'
 
-            
-    
+        df_today_pc = df_pc[df_pc['Date']==dt.utcnow().date()]
+        df_today_pie= df_today_pc.groupby('Frontend').count() 
+
+        df_p=df_pc[df_pc['Parent_author']=='']
+        df_c=df_pc[df_pc['Parent_author']!='']
+        
+        df_today_p= df_p[df_p['Date']==dt.utcnow().date()]
+        df_today_frontends_p=df_today_p.groupby('Frontend').count()
+
+        df_today_c= df_c[df_c['Date']==dt.utcnow().date()]
+        df_today_frontends_c=df_today_c.groupby('Frontend').count()
+
+        df_today_frontends_p.rename(columns={'Author':'Post_count'},inplace=True)
+        df_today_frontends_c.rename(columns={'Author':'Comment_count'},inplace=True)
+        
+        
+
+        base=alt.Chart(df_pc)
+        
+        p_text.progress(75)
+        
+        st.markdown("<h1><center> Post + Comment count Date wise </center></h1>",unsafe_allow_html=True)
+        
+        b = base.mark_bar(size=20,point=True).encode(x='Date', y='count(Author)',color='Type',tooltip=['count(Type)','Type','Date']).configure_axis(
+        labelFontSize=20,
+        titleFontSize=20
+    ).properties(width=1000,height=700)
+
+        st.write(b)
+
+        base1=alt.Chart(df_pc)
+
+        st.markdown("<hr><h1> <center> Frontend Data </center> </h1>",unsafe_allow_html=True)
+
+        c= base1.mark_bar(size=20,point=True).encode(x='Date',y='count(Author)',color='Frontend',tooltip=['count(Frontend)','Frontend']).configure_axis(
+        labelFontSize=20,
+        titleFontSize=20
+    ).properties(width=1000,height=700)
+
+        st.write(c)
+
+        st.markdown("<h1><center> Today's data </center></h1>",unsafe_allow_html=True)
+
+        left_today,right_today= st.beta_columns([1,1])
+
+        left_today.write("<h3><center> Posts </center></h3>",unsafe_allow_html=True)
+
+        right_today.write("<h3> <center> Comments </center> </h3>",unsafe_allow_html=True)
+
+        
+
+        left_today.table(df_today_frontends_p['Post_count'])
+        right_today.table(df_today_frontends_c['Comment_count'])
+
+        p_text.progress(100)
+        p_d.write("Data displayed")
 
     
-    
-            
+    st.markdown("<hr><h1> <center> Engagement Program </center> </h1>",unsafe_allow_html=True)
 
+    d = st.date_input(
+         "Choose the date to display the data",
+         datetime.date(2021, 2, 16),
+         min_value=datetime.date(2021, 2, 15),
+         max_value=datetime.date(2021, 2, 16))
+
+    st.write('Selected Date:', str(d))
+
+    engage_leo,engage_ctp = st.beta_columns(2)
+    engage_stem,engage_sports = st.beta_columns(2)
+
+
+    if d:
+        file_name='Images_{}'.format(str(d))
+
+        engage_leo.markdown("<h3> LeoFinance Engagement for {} </h3>".format(str(d)),unsafe_allow_html=True)
+        engage_leo.image(file_name+'/leo.png')
+        
+        engage_ctp.markdown("<h3>Ctptalk Engagement for {} </h3>".format(str(d)),unsafe_allow_html=True)
+        engage_ctp.image(file_name+'/ctp.png')
+        
+        engage_stem.markdown("<hr><h3> STEMGeeks Engagement for {} </h3>".format(str(d)),unsafe_allow_html=True)
+        engage_stem.image(file_name+'/stem.png')
+        
+        engage_sports.markdown("<hr><h3> Sportstalksocial Engagement for {} </h3>".format(str(d)),unsafe_allow_html=True)
+        engage_sports.image(file_name+'/sports.png')
+
+    
+        
+        
+
+       
+    
+        
+
+        
