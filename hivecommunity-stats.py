@@ -159,9 +159,9 @@ if __name__ == '__main__':
 
     d = st.date_input(
          "Choose the date to display the data",
-         datetime.date(2021, 2, 18),
+         datetime.date(2021, 2, 19),
          min_value=datetime.date(2021, 2, 15),
-         max_value=datetime.date(2021, 2, 18))
+         max_value=datetime.date(2021, 2, 19))
 
     st.write('Selected Date:', str(d))
 
